@@ -57,6 +57,8 @@ function main() {
     }
   `;
 
+
+    // console.log("sadasas");
     // Fragment shader program
 
     // const fsSource = `
@@ -68,19 +70,23 @@ function main() {
     // `;
 
     const fsSource = `
+    precision highp float;
     varying highp vec2 vTextureCoord;
 
-    uniform sampler2D uSampler;
+    uniform sampler2D uSampler1;
+    uniform sampler2D uSampler2;
 
-    void main(void) {
-      gl_FragColor = texture2D(uSampler, vTextureCoord);
+    void main(void) {   
+      vec4 color1  =  texture2D(uSampler1, vTextureCoord);
+      vec4 color2  =  texture2D(uSampler2, vTextureCoord);
+      gl_FragColor = color1 * color2;
     }
   `;
-
     // Initialize a shader program; this is where all the lighting
     // for the vertices and so forth is established.
     const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
-
+    console.log(shaderProgram);
+    // console.log("asdas");
     // Collect all the info needed to use the shader program.
     // Look up which attributes our shader program is using
     // for aVertexPosition, aVevrtexColor and also
@@ -107,7 +113,8 @@ function main() {
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-            uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+            uSampler1: gl.getUniformLocation(shaderProgram, 'uSampler1'),
+            uSampler2: gl.getUniformLocation(shaderProgram, 'uSampler2'),
         },
     };
 
@@ -117,8 +124,10 @@ function main() {
 
     var then = 0;
 
-
-    const texture = loadTexture(gl, 'wallpaper.png');
+    const texture = [];
+    texture.push(loadTexture(gl, 'wallpaper.png'));
+    texture.push(loadTexture(gl, 'bricks2.jpg'));
+    
     // Draw the scene repeatedly
     function render(now) {
         now *= 0.001; // convert to seconds
@@ -227,8 +236,8 @@ function initBuffers(gl) {
             1.0, 0.0,
             0.0, 0.0,
             1.0, 1.0,
-            0.0, 1.0,
-        );
+            0.0, 1.0
+,        );
     };
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates),
@@ -389,7 +398,6 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
     }
 
     if (down) {
-        // console.log("SS");
         if (move_camera_y > 0.00) {
             move_camera_y = 0.00;
             down = 0;
@@ -471,10 +479,19 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
     gl.activeTexture(gl.TEXTURE0);
 
     // Bind the texture to texture unit 0
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.bindTexture(gl.TEXTURE_2D, texture[0]);
 
     // Tell the shader we bound the texture to texture unit 0
-    gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+    gl.uniform1i(programInfo.uniformLocations.uSampler1, 0);
+
+    // Tell WebGL we want to affect texture unit 1
+    gl.activeTexture(gl.TEXTURE0 + 1);
+
+    // Bind the texture to texture unit 1
+    gl.bindTexture(gl.TEXTURE_2D, texture[1]);
+
+    // Tell the shader we bound the texture to texture unit 1
+    gl.uniform1i(programInfo.uniformLocations.uSampler2, 1);
 
     // Tell WebGL which indices to use to index the vertices
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
@@ -533,7 +550,7 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
 function initShaderProgram(gl, vsSource, fsSource) {
     const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
     const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
-
+    console.log(vertexShader);
     // Create the shader program
 
     const shaderProgram = gl.createProgram();
