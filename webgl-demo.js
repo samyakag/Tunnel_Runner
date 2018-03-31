@@ -8,6 +8,8 @@ var jump = 0;
 var move_camera_z = 0;
 var move_camera_y = 0;
 var down = 0;
+var flash_flag = 0;
+var flash_value = 0;
 main();
 
 //
@@ -75,22 +77,31 @@ function main() {
 
     uniform sampler2D uSampler1;
     uniform sampler2D uSampler2;
-
-    void main(void) {   
+    uniform int gray_scale_flag;
+    uniform highp float uFlash;
+    void main(void) {
       vec4 color1  =  texture2D(uSampler1, vTextureCoord);
       vec4 color2  =  texture2D(uSampler2, vTextureCoord);
-      gl_FragColor = color1 * color2;
+      lowp vec4 final = color1 * color2;
+        if(gray_scale_flag != 0)
+        {
+            lowp float gray = (0.2 * final.r + 0.7 * final.g + 0.07 * final.b) * uFlash;
+            gl_FragColor = vec4(gray, gray, gray, 1.0);
+        }
+        else{
+            gl_FragColor = final * uFlash;            
+        }      
     }
   `;
     // Initialize a shader program; this is where all the lighting
     // for the vertices and so forth is established.
     const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
-    console.log(shaderProgram);
+    // console.log(shaderProgram);
     // console.log("asdas");
     // Collect all the info needed to use the shader program.
     // Look up which attributes our shader program is using
     // for aVertexPosition, aVevrtexColor and also
-    // look up uniform locations.
+    // look up uniform locations.d
 
     // const programInfo = {
     //   program: shaderProgram,
@@ -115,8 +126,11 @@ function main() {
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
             uSampler1: gl.getUniformLocation(shaderProgram, 'uSampler1'),
             uSampler2: gl.getUniformLocation(shaderProgram, 'uSampler2'),
+            uFlash: gl.getUniformLocation(shaderProgram, 'uFlash'),
+            gray_scale_flag: gl.getUniformLocation(shaderProgram, 'gray_scale_flag'),
         },
     };
+
 
     // Here's where we call the routine that builds all the
     // objects we'll be drawing.
@@ -127,7 +141,7 @@ function main() {
     const texture = [];
     texture.push(loadTexture(gl, 'wallpaper.png'));
     texture.push(loadTexture(gl, 'bricks2.jpg'));
-    
+
     // Draw the scene repeatedly
     function render(now) {
         now *= 0.001; // convert to seconds
@@ -135,6 +149,8 @@ function main() {
         then = now;
 
         drawScene(gl, programInfo, buffers, texture, deltaTime);
+        gl.uniform1f(programInfo.uniformLocations.uFlash, flash_value/10 + 1);
+        gl.uniform1i(programInfo.uniformLocations.gray_scale_flag, 1);
 
         requestAnimationFrame(render);
     }
@@ -194,50 +210,15 @@ function initBuffers(gl) {
     gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
     const textureCoordinates = [];
     for (var i = 0; i < pathLength; i++) {
-        textureCoordinates.push(
-            // Front
-            1.0, 0.0,
-            0.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-            // Back
-            1.0, 0.0,
-            0.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-            // Top
-            1.0, 0.0,
-            0.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-            // Bottom
-            1.0, 0.0,
-            0.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-            // Right
-            1.0, 0.0,
-            0.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-            // Left
-            1.0, 0.0,
-            0.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-
-            // Left
-            1.0, 0.0,
-            0.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-
-            // Left
-            1.0, 0.0,
-            0.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0
-,        );
+        for (var j = 0; j < sides; j++) {
+            textureCoordinates.push(
+                // Front
+                1.0, 0.0,
+                0.0, 0.0,
+                1.0, 1.0,
+                0.0, 1.0,
+            );
+        };
     };
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates),
@@ -373,6 +354,11 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
     if (rotate_left) {
         cubeRotation += 5 * (Math.PI / 180);
     }
+    // if(flash_flag)
+    // {
+        // console.log("SADAS");
+        flash_value = (flash_value + 0.05)%20;
+    // }
     const fieldOfView = 45 * Math.PI / 180; // in radians
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
     const zNear = 0.1;
@@ -525,11 +511,15 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
         var ascii = parseInt(e.keyCode);
         if (ascii == 65) {
             rotate_left = 1;
-        } else if (ascii == 68) {
+        } if (ascii == 68) {
             rotate_right = 1;
-        } else if (ascii == 32) {
+        } if (ascii == 32) {
             jump = 1;
         }
+        if(ascii == 66){
+            flash_flag = 1;
+        }
+
     };
 
 
@@ -541,6 +531,10 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
         } else if (ascii == 68) {
             rotate_right = 0;
         }
+        if(ascii == 66)
+        {
+            flash_flag = 0;
+        }
     };
 }
 
@@ -550,14 +544,15 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
 function initShaderProgram(gl, vsSource, fsSource) {
     const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
     const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
-    console.log(vertexShader);
+    // console.log(vertexShader);
     // Create the shader program
 
     const shaderProgram = gl.createProgram();
     gl.attachShader(shaderProgram, vertexShader);
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
-
+    gl.deleteShader(vertexShader);
+    gl.deleteShader(fragmentShader);
     // If creating the shader program failed, alert
 
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
