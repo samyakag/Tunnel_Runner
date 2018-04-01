@@ -10,6 +10,9 @@ var move_camera_y = 0;
 var down = 0;
 var flash_flag = 0;
 var flash_value = 0;
+var level = 0;
+var gr_flag = 0;
+var speed = 0.05;
 main();
 
 //
@@ -20,7 +23,8 @@ function main() {
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
     // If we don't have a GL context, give up now
-
+    var audio = new Audio('song.mp3');
+    audio.play();
     if (!gl) {
         alert('Unable to initialize WebGL. Your browser or machine may not support it.');
         return;
@@ -71,12 +75,31 @@ function main() {
     //   }
     // `;
 
+
+  //   const vsSource_obs = `
+  //   attribute vec4 aVertexPosition;
+  //   attribute vec4 aVertexColor;
+
+  //   uniform mat4 uModelViewMatrix;
+  //   uniform mat4 uProjectionMatrix;
+
+  //   varying lowp vec4 vColor;
+
+  //   void main(void) {
+  //     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  //     vColor = aVertexColor;
+  //   }
+  // `;
+
+
     const fsSource = `
     precision highp float;
     varying highp vec2 vTextureCoord;
 
+
     uniform sampler2D uSampler1;
     uniform sampler2D uSampler2;
+    uniform sampler2D uSampler3;
     uniform int gray_scale_flag;
     uniform highp float uFlash;
     void main(void) {
@@ -93,9 +116,30 @@ function main() {
         }      
     }
   `;
+
+  //   const fsSource_obs = `
+  //   precision highp float;
+  //   varying lowp vec4 vColor;
+  //   uniform int gray_scale_flag1;
+
+  //   void main(void) {
+  //       if(gray_scale_flag1 != 0)
+  //       {
+  //           lowp float gray = (0.2 * vColor.r + 0.7 * vColor.g + 0.07 * vColor.b);
+  //           gl_FragColor = vec4(gray, gray, gray, 1.0);
+  //       }
+  //       else{
+  //           gl_FragColor = vColor;            
+  //       }      
+
+  //   }
+  // `;
     // Initialize a shader program; this is where all the lighting
     // for the vertices and so forth is established.
     const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+    // console.log("ASdsa");
+    const shaderProgram_obs = initShaderProgram(gl, vsSource, fsSource);
+    // console.log("ASDAS");
     // console.log(shaderProgram);
     // console.log("asdas");
     // Collect all the info needed to use the shader program.
@@ -126,21 +170,39 @@ function main() {
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
             uSampler1: gl.getUniformLocation(shaderProgram, 'uSampler1'),
             uSampler2: gl.getUniformLocation(shaderProgram, 'uSampler2'),
+            uSampler3: gl.getUniformLocation(shaderProgram, 'uSampler3'),
             uFlash: gl.getUniformLocation(shaderProgram, 'uFlash'),
             gray_scale_flag: gl.getUniformLocation(shaderProgram, 'gray_scale_flag'),
         },
     };
 
+    // const programInfo_obs = {
+    //     program: shaderProgram_obs,
+    //     attribLocations: {
+    //         vertexPosition: gl.getAttribLocation(shaderProgram_obs, 'aVertexPosition'),
+    //         vertexColor: gl.getAttribLocation(shaderProgram_obs, 'aVertexColor'),
+    //     },
+    //     uniformLocations: {
+    //         projectionMatrix: gl.getUniformLocation(shaderProgram_obs, 'uProjectionMatrix'),
+    //         modelViewMatrix: gl.getUniformLocation(shaderProgram_obs, 'uModelViewMatrix'),
+    //         gray_scale_flag1: gl.getUniformLocation(shaderProgram_obs, 'gray_scale_flag1'),
+    //     },
+    // };
+
+
 
     // Here's where we call the routine that builds all the
     // objects we'll be drawing.
-    const buffers = initBuffers(gl);
-
+    const buffers = [];
+    buffers.push(initBuffers(gl));
+    buffers.push(initBuffersObstacles(gl, 15));
+    // console.log(buffers_obstacles);
     var then = 0;
 
     const texture = [];
-    texture.push(loadTexture(gl, 'wallpaper.png'));
     texture.push(loadTexture(gl, 'bricks2.jpg'));
+    texture.push(loadTexture(gl, 'wallpaper.png'));
+    texture.push(loadTexture(gl, 'lava.jpg'));
 
     // Draw the scene repeatedly
     function render(now) {
@@ -149,8 +211,10 @@ function main() {
         then = now;
 
         drawScene(gl, programInfo, buffers, texture, deltaTime);
-        gl.uniform1f(programInfo.uniformLocations.uFlash, flash_value/10 + 1);
-        gl.uniform1i(programInfo.uniformLocations.gray_scale_flag, 1);
+        // drawSceneObstacles(gl, programInfo_obs, buffers_obstacles, deltaTime);
+
+        gl.uniform1f(programInfo.uniformLocations.uFlash, flash_value / 10 + 1);
+        gl.uniform1i(programInfo.uniformLocations.gray_scale_flag, gr_flag);
 
         requestAnimationFrame(render);
     }
@@ -224,65 +288,6 @@ function initBuffers(gl) {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates),
         gl.STATIC_DRAW);
 
-    // Now set up the colors for the faces. We'll use solid colors
-    // for each face.
-
-    // red = [1.0,  0.0,  0.0,  1.0];
-    // white = [1.0,  1.0,  1.0,  1.0];    
-    // green = [0.0,  1.0,  0.0,  1.0];
-    // blue = [0.0,  0.0,  1.0,  1.0];
-    // yellow = [1.0,  1.0,  0.0,  1.0];
-    // purple =   [1.0,  0.0,  1.0,  1.0],
-    // cyan = [0.0, 1.0, 1.0, 1.0];
-    // greenish_yellow = [0.5, 1.0, 0.0, 1.0];
-    // pink = [0.737255, 0.560784, 0.560784, 1.0];
-    // scarlet = [0.55, 0.09 ,0.09, 1.0];
-    // black = [0.0, 0.0, 0.0, 1.0];
-    // var temp = {
-    //   "1" : red,
-    //   "2" : white,
-    //   "3" : green,
-    //   "4" : blue,
-    //   "5" : yellow,
-    //   "6" : purple,
-    //   "7" : cyan,
-    //   "8" : greenish_yellow,
-    //   "9" : pink,
-    //   "0" : scarlet,
-    //   "10" : black,
-    // };
-
-    // // Convert the array of colors into a table for all the vertices.
-
-    // var colors = [];
-    // for(var i = 0 ; i < pathLength ; i++)
-    // {
-    //   for (var j = 0; j < 8; ++j) {
-    //     if((i <= 10 && i >= 0) || (i <= 199 && i >= 185))
-    //     {
-    //       if((j%2 && i%2)  || (j%2 == 0 && i%2 == 0))
-    //       {
-    //         var c = temp["10"];// black
-    //       }
-    //       else
-    //       {
-    //         var c = temp["2"]; // white
-    //       }
-    //     }
-    //     else
-    //     {
-    //       var choose = (Math.floor(Math.random() * 10))%10;
-    //       var c = temp[choose.toString()];        
-    //     }
-    //     colors = colors.concat(c, c, c, c);
-
-    //     // Repeat each color four times for the four vertices of the face
-    //   }
-
-    // }
-    // const colorBuffer = gl.createBuffer();
-    // gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 
     // Build the element array buffer; this specifies the indices
     // into the vertex arrays for each face's vertices.
@@ -313,24 +318,22 @@ function initBuffers(gl) {
     return {
         position: positionBuffer,
         textureCoord: textureCoordBuffer,
+        vertexCount : indices.length,
         indices: indexBuffer,
     };
-
-    // return {
-    //   position: positionBuffer,
-    //   color: colorBuffer,
-    //   indices: indexBuffer,
-    // };
 }
 
 //
 // Draw the scene.
 //
 function drawScene(gl, programInfo, buffers, texture, deltaTime) {
-    move_camera_z += 0.05;
+    move_camera_z += speed;
     if (move_camera_z > 360) {
+        level++;
         move_camera_z = 0;
+        speed *= 2;
     }
+    // console.log(move_camera_z);
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
@@ -354,10 +357,8 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
     if (rotate_left) {
         cubeRotation += 5 * (Math.PI / 180);
     }
-    // if(flash_flag)
-    // {
-        // console.log("SADAS");
-        flash_value = (flash_value + 0.05)%20;
+    // if (flash_flag) {
+        flash_value = (flash_value + 0.05) % 20;
     // }
     const fieldOfView = 45 * Math.PI / 180; // in radians
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
@@ -377,8 +378,8 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
     // the center of the scene.
     const modelViewMatrix = mat4.create();
 
-    if (jump) {
-        move_camera_y -= 1.0;
+    if (jump && !down) {
+        move_camera_y -= 1.5;
         down = 1;
         jump = 0;
     }
@@ -388,122 +389,119 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
             move_camera_y = 0.00;
             down = 0;
         } else {
-            move_camera_y += 0.05;
+            move_camera_y += 0.03;
         }
     }
+
+
+        mat4.translate(modelViewMatrix, // destination matrix
+            modelViewMatrix, // matrix to translate
+            [-0.0, 1 + move_camera_y, move_camera_z]); // amount to translate
+
+
+        mat4.rotate(modelViewMatrix, // destination matrix
+            modelViewMatrix, // matrix to rotate
+            cubeRotation, // amount to rotate in radians
+            [0, 0, 1]); // axis to rotate around (Z)
+
     // Now move the drawing position a bit to where we want to
     // start drawing the square.
-
-    mat4.translate(modelViewMatrix, // destination matrix
-        modelViewMatrix, // matrix to translate
-        [-0.0, move_camera_y, move_camera_z]); // amount to translate
-
-
-    mat4.rotate(modelViewMatrix, // destination matrix
-        modelViewMatrix, // matrix to rotate
-        cubeRotation, // amount to rotate in radians
-        [0, 0, 1]); // axis to rotate around (Z)
-    // mat4.rotate(modelViewMatrix,  // destination matrix
-    //             modelViewMatrix,  // matrix to rotate
-    //             cubeRotation * .7,// amount to rotate in radians
-    //             [0, 1, 0]);       // axis to rotate around (X)
-
-    // Tell WebGL how to pull out the positions from the position
-    // buffer into the vertexPosition attribute
+    for (var i = 0; i < buffers.length; i++) 
     {
-        const numComponents = 3;
-        const type = gl.FLOAT;
-        const normalize = false;
-        const stride = 0;
-        const offset = 0;
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-        gl.vertexAttribPointer(
-            programInfo.attribLocations.vertexPosition,
-            numComponents,
-            type,
-            normalize,
-            stride,
-            offset);
-        gl.enableVertexAttribArray(
-            programInfo.attribLocations.vertexPosition);
-    }
+        if(i == 1)
+        {   
+            mat4.rotate(modelViewMatrix,  // destination matrix
+                modelViewMatrix,  // matrix to rotate
+                (performance.now() * Math.PI / 180)/100,// amount to rotate in radians
+                [0, 0, 1]);       // axis to rotate around (X)
+            // console.log(buffers[i].position.length);
+        }   
 
-    // Tell WebGL how to pull out the colors from the color buffer
-    // into the vertexColor attribute.
-    // {
-    //   const numComponents = 4;
-    //   const type = gl.FLOAT;
-    //   const normalize = false;
-    //   const stride = 0;
-    //   const offset = 0;
-    //   gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
-    //   gl.vertexAttribPointer(
-    //       programInfo.attribLocations.vertexColor,
-    //       numComponents,
-    //       type,
-    //       normalize,
-    //       stride,
-    //       offset);
-    //   gl.enableVertexAttribArray(
-    //       programInfo.attribLocations.vertexColor);
-    // }
+        // Tell WebGL how to pull out the positions from the position
+        // buffer into the vertexPosition attribute
+        {
+            const numComponents = 3;
+            const type = gl.FLOAT;
+            const normalize = false;
+            const stride = 0;
+            const offset = 0;
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers[i].position);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.vertexPosition,
+                numComponents,
+                type,
+                normalize,
+                stride,
+                offset);
+            gl.enableVertexAttribArray(
+                programInfo.attribLocations.vertexPosition);
+        }
 
-    // tell webgl how to pull out the texture coordinates from buffer
-    {
-        const num = 2; // every coordinate composed of 2 values
-        const type = gl.FLOAT; // the data in the buffer is 32 bit float
-        const normalize = false; // don't normalize
-        const stride = 0; // how many bytes to get from one set to the next
-        const offset = 0; // how many bytes inside the buffer to start from
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
-        gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, num, type, normalize, stride, offset);
-        gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
-    }
+        // tell webgl how to pull out the texture coordinates from buffer
+        {
+            const num = 2; // every coordinate composed of 2 values
+            const type = gl.FLOAT; // the data in the buffer is 32 bit float
+            const normalize = false; // don't normalize
+            const stride = 0; // how many bytes to get from one set to the next
+            const offset = 0; // how many bytes inside the buffer to start from
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers[i].textureCoord);
+            gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, num, type, normalize, stride, offset);
+            gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+        }
+
+        // Tell WebGL we want to affect texture unit 0
+        gl.activeTexture(gl.TEXTURE0);
+
+        // Bind the texture to texture unit 0
+        gl.bindTexture(gl.TEXTURE_2D, texture[level % 3]);
+
+        // Tell the shader we bound the texture to texture unit 0
+        gl.uniform1i(programInfo.uniformLocations.uSampler1, 0);
+
+        // // Tell WebGL we want to affect texture unit 1
+        // gl.activeTexture(gl.TEXTURE1);
+
+        // // Bind the texture to texture unit 1
+        // gl.bindTexture(gl.TEXTURE_2D, texture[1]);
+
+        // // Tell the shader we bound the texture to texture unit 1
+        // gl.uniform1i(programInfo.uniformLocations.uSampler2, 1);
+
+        // Tell WebGL we want to affect texture unit 1
+        // gl.activeTexture(gl.TEXTURE2);
+
+        // // Bind the texture to texture unit 1
+        // gl.bindTexture(gl.TEXTURE_2D, texture[2]);
+
+        // // Tell the shader we bound the texture to texture unit 1
+        // gl.uniform1i(programInfo.uniformLocations.uSampler3, 2);
 
 
-    // Tell WebGL we want to affect texture unit 0
-    gl.activeTexture(gl.TEXTURE0);
+        // Tell WebGL which indices to use to index the vertices
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers[i].indices);
 
-    // Bind the texture to texture unit 0
-    gl.bindTexture(gl.TEXTURE_2D, texture[0]);
+        // Tell WebGL to use our program when drawing
 
-    // Tell the shader we bound the texture to texture unit 0
-    gl.uniform1i(programInfo.uniformLocations.uSampler1, 0);
+        gl.useProgram(programInfo.program);
 
-    // Tell WebGL we want to affect texture unit 1
-    gl.activeTexture(gl.TEXTURE0 + 1);
+        // Set the shader uniforms
 
-    // Bind the texture to texture unit 1
-    gl.bindTexture(gl.TEXTURE_2D, texture[1]);
-
-    // Tell the shader we bound the texture to texture unit 1
-    gl.uniform1i(programInfo.uniformLocations.uSampler2, 1);
-
-    // Tell WebGL which indices to use to index the vertices
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-
-    // Tell WebGL to use our program when drawing
-
-    gl.useProgram(programInfo.program);
-
-    // Set the shader uniforms
-
-    gl.uniformMatrix4fv(
-        programInfo.uniformLocations.projectionMatrix,
-        false,
-        projectionMatrix);
-    gl.uniformMatrix4fv(
-        programInfo.uniformLocations.modelViewMatrix,
-        false,
-        modelViewMatrix);
-
-    {
-        const vertexCount = 48 * pathLength;
-        const type = gl.UNSIGNED_SHORT;
-        const offset = 0;
-        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-    }
-
+        gl.uniformMatrix4fv(
+            programInfo.uniformLocations.projectionMatrix,
+            false,
+            projectionMatrix);
+        gl.uniformMatrix4fv(
+            programInfo.uniformLocations.modelViewMatrix,
+            false,
+            modelViewMatrix);
+        // console.log(buffers[i].vertexCount);
+        {
+            const vertexCount = buffers[i].vertexCount;
+            const type = gl.UNSIGNED_SHORT;
+            const offset = 0;
+            gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+        }
+    };
     // Update the rotation for the next draw
 
     window.onkeydown = function(e) {
@@ -511,13 +509,12 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
         var ascii = parseInt(e.keyCode);
         if (ascii == 65) {
             rotate_left = 1;
-        } if (ascii == 68) {
-            rotate_right = 1;
-        } if (ascii == 32) {
-            jump = 1;
         }
-        if(ascii == 66){
-            flash_flag = 1;
+        if (ascii == 68) {
+            rotate_right = 1;
+        }
+        if (ascii == 32) {
+            jump = 1;
         }
 
     };
@@ -531,11 +528,12 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
         } else if (ascii == 68) {
             rotate_right = 0;
         }
-        if(ascii == 66)
-        {
-            flash_flag = 0;
+        if (ascii == 66) {
+            gr_flag = (++gr_flag)%2;
+
         }
     };
+
 }
 
 //
@@ -544,10 +542,10 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
 function initShaderProgram(gl, vsSource, fsSource) {
     const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
     const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
-    // console.log(vertexShader);
     // Create the shader program
 
     const shaderProgram = gl.createProgram();
+    // console.log(fragmentShader)
     gl.attachShader(shaderProgram, vertexShader);
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
