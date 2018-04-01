@@ -32,23 +32,6 @@ function main() {
         return;
     }
 
-    // Vertex shader program
-
-    // const vsSource = `
-    //   attribute vec4 aVertexPosition;
-    //   attribute vec4 aVertexColor;
-
-    //   uniform mat4 uModelViewMatrix;
-    //   uniform mat4 uProjectionMatrix;
-
-    //   varying lowp vec4 vColor;
-
-    //   void main(void) {
-    //     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    //     vColor = aVertexColor;
-    //   }
-    // `;
-
 
     const vsSource = `
     attribute vec4 aVertexPosition;
@@ -64,34 +47,6 @@ function main() {
       vTextureCoord = aTextureCoord;
     }
   `;
-
-
-    // console.log("sadasas");
-    // Fragment shader program
-
-    // const fsSource = `
-    //   varying lowp vec4 vColor;
-
-    //   void main(void) {
-    //     gl_FragColor = vColor;
-    //   }
-    // `;
-
-
-  //   const vsSource_obs = `
-  //   attribute vec4 aVertexPosition;
-  //   attribute vec4 aVertexColor;
-
-  //   uniform mat4 uModelViewMatrix;
-  //   uniform mat4 uProjectionMatrix;
-
-  //   varying lowp vec4 vColor;
-
-  //   void main(void) {
-  //     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-  //     vColor = aVertexColor;
-  //   }
-  // `;
 
 
     const fsSource = `
@@ -119,47 +74,10 @@ function main() {
     }
   `;
 
-  //   const fsSource_obs = `
-  //   precision highp float;
-  //   varying lowp vec4 vColor;
-  //   uniform int gray_scale_flag1;
-
-  //   void main(void) {
-  //       if(gray_scale_flag1 != 0)
-  //       {
-  //           lowp float gray = (0.2 * vColor.r + 0.7 * vColor.g + 0.07 * vColor.b);
-  //           gl_FragColor = vec4(gray, gray, gray, 1.0);
-  //       }
-  //       else{
-  //           gl_FragColor = vColor;            
-  //       }      
-
-  //   }
-  // `;
     // Initialize a shader program; this is where all the lighting
     // for the vertices and so forth is established.
     const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
-    // console.log("ASdsa");
     const shaderProgram_obs = initShaderProgram(gl, vsSource, fsSource);
-    // console.log("ASDAS");
-    // console.log(shaderProgram);
-    // console.log("asdas");
-    // Collect all the info needed to use the shader program.
-    // Look up which attributes our shader program is using
-    // for aVertexPosition, aVevrtexColor and also
-    // look up uniform locations.d
-
-    // const programInfo = {
-    //   program: shaderProgram,
-    //   attribLocations: {
-    //     vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-    //     vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
-    //   },
-    //   uniformLocations: {
-    //     projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-    //     modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-    //   },
-    // };
 
     const programInfo = {
         program: shaderProgram,
@@ -177,20 +95,6 @@ function main() {
             gray_scale_flag: gl.getUniformLocation(shaderProgram, 'gray_scale_flag'),
         },
     };
-
-    // const programInfo_obs = {
-    //     program: shaderProgram_obs,
-    //     attribLocations: {
-    //         vertexPosition: gl.getAttribLocation(shaderProgram_obs, 'aVertexPosition'),
-    //         vertexColor: gl.getAttribLocation(shaderProgram_obs, 'aVertexColor'),
-    //     },
-    //     uniformLocations: {
-    //         projectionMatrix: gl.getUniformLocation(shaderProgram_obs, 'uProjectionMatrix'),
-    //         modelViewMatrix: gl.getUniformLocation(shaderProgram_obs, 'uModelViewMatrix'),
-    //         gray_scale_flag1: gl.getUniformLocation(shaderProgram_obs, 'gray_scale_flag1'),
-    //     },
-    // };
-
 
 
     // Here's where we call the routine that builds all the
@@ -648,3 +552,14 @@ function loadTexture(gl, url) {
 function isPowerOf2(value) {
     return (value & (value - 1)) == 0;
 }
+
+
+// function collisionDetection(obsObj) {
+//   for (var i in obsObj.positions) {
+//     if(i % 3 == 2)
+//       if (obsObj.positions[i] - cam_position[2] < 1.0 && obsObj.positions[i] - cam_position[2] > -1.0) {
+//         if (Math.cos(obstacleRotation) < 0.2)
+//           return 1;
+//       }
+//   }
+// }
