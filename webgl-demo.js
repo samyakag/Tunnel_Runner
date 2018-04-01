@@ -13,6 +13,8 @@ var flash_value = 0;
 var level = 0;
 var gr_flag = 0;
 var speed = 0.05;
+var n = 5;
+var score = 0;
 main();
 
 //
@@ -327,12 +329,16 @@ function initBuffers(gl) {
 // Draw the scene.
 //
 function drawScene(gl, programInfo, buffers, texture, deltaTime) {
+    score += (level+1)*0.1;
     move_camera_z += speed;
     if (move_camera_z > 360) {
         level++;
         move_camera_z = 0;
         speed *= 2;
     }
+    document.getElementById("score").innerHTML = Math.floor(score);
+    document.getElementById("level").innerHTML = level;
+
     // console.log(move_camera_z);
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
@@ -409,10 +415,12 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime) {
     for (var i = 0; i < buffers.length; i++) 
     {
         if(i == 1)
-        {   
+        {
+            // choice = Math.floor(Math.random()*2) + 1;   
+            // if(choice%2 == 0)
             mat4.rotate(modelViewMatrix,  // destination matrix
                 modelViewMatrix,  // matrix to rotate
-                (performance.now() * Math.PI / 180)/100,// amount to rotate in radians
+                (performance.now() * Math.PI / 180)*(level+1)/100,// amount to rotate in radians
                 [0, 0, 1]);       // axis to rotate around (X)
             // console.log(buffers[i].position.length);
         }   

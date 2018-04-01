@@ -3,16 +3,17 @@
 
 <head>
     <meta charset="utf-8">
-    <title>WebGL Demo</title>
+    <title id="title">Tunner Runner</title>
     <link rel="stylesheet" href="../webgl.css" type="text/css">
 </head>
 
 <body>
-    <audio src="song.mp3">
-        <p>If you are reading this, it is because your browser does not support the audio element. </p>
-    </audio>
     <canvas id="glcanvas" width="640" height="480"></canvas>
 </body>
+<p>
+  score: <span id="score"></span><br>
+  level: <span id="level"></span>
+</p>
 <script src="./gl-matrix.js"></script>
 <script src="obstacles.js"></script>
 <script src="webgl-demo.js"></script>
